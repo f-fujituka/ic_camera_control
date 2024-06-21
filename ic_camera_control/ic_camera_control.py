@@ -79,10 +79,7 @@ class IcCameraControl:
         self._flip_image()
 
         # 取得開始
-        self._start()
-
-        # 画像の解像度・フォーマットを取得
-        self._get_image_description()
+        self.start()
 
     @staticmethod
     def _frameReadyCallback(hGrabber, pBuffer, framenumber, pData):
@@ -125,21 +122,6 @@ class IcCameraControl:
         else:
             return self.userdata.connected, None
 
-    def release(self):
-        """ 終了処理 """
-        if self.ic.IC_IsDevValid(self._hGrabber):
-            self.ic.IC_StopLive(self._hGrabber)
-            self.ic.IC_ReleaseGrabber(self._hGrabber)
-
-    def save_properties(self, file_path):
-        """ 設定ファイルの保存。XML形式。
-
-        Args:
-            file_path (str): ***.xml 保存する場所
-
-        """
-        self.ic.IC_SaveDeviceStateToFile(self._hGrabber, tis.T(file_path))
-
     def open_device(self, config_file_path):
         """ デバイスを開く
 
@@ -180,6 +162,23 @@ class IcCameraControl:
                 ret == tis.IC_WRONG_INCOMPATIBLE_XML:
             logger.error("Can not load config")
 
+    def start(self, create_window=False):
+        """ 画像の取得の開始
+
+        Args:
+            create_window (bool): Trueだと、tisgrabberがウィンドウを生成してくれる
+        """
+        self.ic.IC_StartLive(self._hGrabber, create_window)
+
+        # 画像の解像度・フォーマットを取得
+        self._get_image_description()
+
+    def release(self):
+        """ 終了処理 """
+        if self.ic.IC_IsDevValid(self._hGrabber):
+            self.ic.IC_StopLive(self._hGrabber)
+            self.ic.IC_ReleaseGrabber(self._hGrabber)
+
     def show_property_dialog(self):
         """ 設定変更ウィンドウを表示 """
         dialog_thread = threading.Thread(target=self.ic.IC_ShowPropertyDialog, args=(self._hGrabber,))
@@ -188,6 +187,15 @@ class IcCameraControl:
     def list_available_properties(self):
         """設定可能な項目一覧を表示。なぜかライブ中だと表示できない。"""
         self.ic.IC_printItemandElementNames(self._hGrabber)
+
+    def save_properties(self, file_path):
+        """ 設定ファイルの保存。XML形式。
+
+        Args:
+            file_path (str): ***.xml 保存する場所
+
+        """
+        self.ic.IC_SaveDeviceStateToFile(self._hGrabber, tis.T(file_path))
 
     def _select_device(self):
         """ デバイスを選択または開く """
@@ -217,14 +225,6 @@ class IcCameraControl:
         self.ic.IC_CreateFrameFilter(tis.T("Rotate Flip"), _filter)
         self.ic.IC_AddFrameFilterToDevice(self._hGrabber, _filter)
         self.ic.IC_FrameFilterSetParameterBoolean(_filter, tis.T("Flip V"), 1)
-
-    def _start(self, create_window=False):
-        """ 画像の取得の開始
-
-        Args:
-            create_window (bool): Trueだと、tisgrabberがウィンドウを生成してくれる
-        """
-        self.ic.IC_StartLive(self._hGrabber, create_window)
 
     def _get_image_description(self):
         """ 画像の解像度・フォーマットを取得する """
