@@ -8,6 +8,25 @@ import numpy as np
 
 from . import tisgrabber as tis
 
+# ライブラリのルートロガーを作成
+logger = logging.getLogger('ic_camera_control')
+logger.addHandler(logging.NullHandler())
+
+
+def configure_logging(level=logging.WARNING, handler=None):
+    """ ライブラリのロガー設定を行う関数
+
+    Args:
+        level (int): ログレベル (e.g., logging.DEBUG, logging.INFO, etc.)
+        handler (logging.Handler): ログ出力先のハンドラー (省略時はStreamHandler)
+    """
+    if handler is None:
+        handler = logging.StreamHandler()
+
+    handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+    logger.addHandler(handler)
+    logger.setLevel(level)
+
 
 class CallbackUserdata(ctypes.Structure):
     """  コールバック関数に渡されるユーザーデータの例 """
@@ -81,11 +100,11 @@ class IcCameraControl:
             userdata: ユーザーデータ構造へのポインター
         """
         userdata.connected = False
-        logging.error(f"Device {userdata.devicename} lost")
+        logger.error(f"Device {userdata.devicename} lost")
 
     @staticmethod
     def _handle_device_open_error():
-        logging.info("No device opened")
+        logger.info("No device opened")
 
     def read(self):
         """ 画像の取得
@@ -102,7 +121,7 @@ class IcCameraControl:
                                        shape=(self._height.value, self._width.value, self._channel))
                 return self.userdata.connected, img_array
             else:
-                raise ConnectionError("No device found.")
+                logger.warning("No device found.")
         else:
             return self.userdata.connected, None
 
@@ -139,6 +158,7 @@ class IcCameraControl:
 
         if self.ic.IC_IsDevValid(self._hGrabber):
             self._setup_device()
+            logger.info(f"Device {self.userdata.devicename} open")
             return True
         else:
             self._handle_device_open_error()
@@ -158,7 +178,7 @@ class IcCameraControl:
         # 設定ファイルが存在しない場合、デバイスがない場合、xmlの形式が間違っている場合
         if ret == tis.IC_FILE_NOT_FOUND or ret == tis.IC_DEVICE_NOT_FOUND or ret == tis.IC_WRONG_XML_FORMAT or \
                 ret == tis.IC_WRONG_INCOMPATIBLE_XML:
-            logging.error("Can not load config")
+            logger.error("Can not load config")
 
     def show_property_dialog(self):
         """ 設定変更ウィンドウを表示 """
@@ -181,13 +201,12 @@ class IcCameraControl:
 
     def _setup_device(self):
         """ デバイスの設定 """
-        self.userdata.devicename = self.ic.IC_GetDeviceName(self._hGrabber)
+        self.userdata.devicename = self.ic.IC_GetDeviceName(self._hGrabber).decode('utf-8', 'ignore')
         self.userdata.connected = True
 
         self.ic.IC_SetCallbacks(self._hGrabber,
                                 self.frameReadyCallbackFunc, None,
                                 self.deviceLostCallbackFunc, self.userdata)
-
 
     def _flip_image(self):
         """ 画像を反転させる
