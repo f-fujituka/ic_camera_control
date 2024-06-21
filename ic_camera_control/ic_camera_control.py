@@ -37,7 +37,7 @@ class CallbackUserdata(ctypes.Structure):
 
 
 class IcCameraControl:
-    def __init__(self, config_file_path="", IC_MsgBox_show=True, dll_path="./tisgrabber_x64.dll"):
+    def __init__(self, config_file_path="", dll_path="./tisgrabber_x64.dll"):
         """ 単体カメラを表示するクラス
 
         Args:
@@ -60,9 +60,6 @@ class IcCameraControl:
 
         # ICImagingControlクラスライブラリを初期化
         self.ic.IC_InitLibrary(0)
-
-        # ICのメッセージボックスを表示するフラグ
-        self.IC_MsgBox_show = IC_MsgBox_show
 
         # 関数ポインタを作成
         self.frameReadyCallbackFunc = self.ic.FRAMEREADYCALLBACK(self._frameReadyCallback)
