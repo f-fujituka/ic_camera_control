@@ -1,1 +1,1 @@
-from ic_camera_control.ic_camera_control import *
+from ic_camera_control.ic_camera_control import IcCameraControl
